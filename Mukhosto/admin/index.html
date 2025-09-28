@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+  <div id="dashboard" class="hidden max-w-4xl mx-auto bg-white p-6 shadow-lg rounded-xl">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+      <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Logout</button>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">Only visible to <strong>Admins</strong>. Below is the full user list:</p>
+    <div id="user-list" class="space-y-4">
+      <p class="text-gray-400">Loading users...</p>
+    </div>
+  </div>
+
+  <div id="error" class="hidden text-center mt-20 text-gray-600">
+    <h2 class="text-3xl font-bold text-red-600 mb-4">404 - Page Not Found</h2>
+    <p>You do not have permission to view this page.</p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqzg9fA14lD_ygNx8CSRiRsnrz1bBNfUw",
+      authDomain: "memory-auth-9515c.firebaseapp.com",
+      projectId: "memory-auth-9515c",
+      storageBucket: "memory-auth-9515c.appspot.com",
+      messagingSenderId: "862743577103",
+      appId: "1:862743577103:web:11fe02f4c24ef2c9c8197a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const dashboard = document.getElementById("dashboard");
+    const userList = document.getElementById("user-list");
+    const errorDiv = document.getElementById("error");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "../login.html";
+        return;
+      }
+
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists() || userDocSnap.data().admin !== true) {
+        // Not admin — show error
+        errorDiv.classList.remove("hidden");
+        return;
+      }
+
+      // Is admin — show dashboard
+      dashboard.classList.remove("hidden");
+
+      const snapshot = await getDocs(collection(db, "users"));
+      userList.innerHTML = "";
+
+      if (snapshot.empty) {
+        userList.innerHTML = "<p class='text-gray-500'>No users found.</p>";
+        return;
+      }
+
+      const pendingUsers = [];
+      const otherUsers = [];
+
+      snapshot.forEach(docSnap => {
+        const userData = docSnap.data();
+        const uid = docSnap.id;
+        const name = userData.name || "N/A";
+        const email = userData.email || "Unknown";
+        const trxid = userData.trxid || null;
+        const mobile = userData.mobile || null;
+        const paid = userData.paid === true;
+        const paymentStatus = userData.paymentStatus || "not paid";
+
+        const userObj = { uid, name, email, trxid, mobile, paid, paymentStatus };
+        if (paymentStatus === "pending") {
+          pendingUsers.push(userObj);
+        } else {
+          otherUsers.push(userObj);
+        }
+      });
+
+      const sortedUsers = [...pendingUsers, ...otherUsers];
+
+      sortedUsers.forEach(({ uid, name, email, trxid, mobile, paid, paymentStatus }) => {
+        const statusColor = paymentStatus === "pending"
+          ? "text-yellow-600"
+          : paid ? "text-green-600"
+          : "text-gray-500";
+
+        const cardBg = paymentStatus === "pending" ? "bg-red-100" : "bg-gray-100";
+        const showVerifyBtn = paymentStatus === "pending";
+
+        const div = document.createElement("div");
+        div.className = `flex flex-col sm:flex-row justify-between items-start sm:items-center ${cardBg} p-4 rounded`;
+
+        div.innerHTML = `
+          <div>
+            <p class="font-semibold">${name}</p>
+            <p class="text-sm text-gray-700">${email}</p>
+            ${trxid ? `<p class="text-sm text-yellow-700">TRX: ${trxid}</p>` : ""}
+            ${mobile ? `<p class="text-sm text-blue-700">Mobile: ${mobile}</p>` : ""}
+            <p class="text-sm ${statusColor} mt-1">Payment Status: ${paymentStatus}</p>
+            <span class="inline-block mt-2 px-2 py-1 text-xs rounded font-medium ${paid ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+              ${paid ? '✅ Has Access' : '❌ No Access'}
+            </span>
+          </div>
+          <div class="mt-3 sm:mt-0 flex items-center space-x-2">
+            <button
+              onclick="updateAccess('${uid}', ${!paid})"
+              class="px-3 py-1 text-sm rounded text-white bg-${paid ? 'red' : 'green'}-600"
+            >
+              ${paid ? 'Revoke Access' : 'Give Access'}
+            </button>
+            ${showVerifyBtn ? `
+              <button
+                onclick="verifyPayment('${uid}')"
+                class="p-2 text-sm rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                title="Verify Payment"
+              >
+                🗸
+              </button>` : ""}
+          </div>
+        `;
+
+        userList.appendChild(div);
+      });
+    });
+
+    window.updateAccess = async (uid, giveAccess) => {
+      const confirmed = confirm(`Are you sure you want to ${giveAccess ? "grant" : "revoke"} access?`);
+      if (!confirmed) return;
+
+      await updateDoc(doc(db, "users", uid), {
+        paid: giveAccess,
+        paymentStatus: giveAccess ? "verified" : "rejected"
+      });
+
+      alert(`User access has been ${giveAccess ? "granted" : "revoked"}.`);
+      location.reload();
+    };
+
+    window.verifyPayment = async (uid) => {
+      const confirmed = confirm("Mark this payment as verified?");
+      if (!confirmed) return;
+
+      await updateDoc(doc(db, "users", uid), {
+        paid: true,
+        paymentStatus: "verified"
+      });
+
+      alert("Payment marked as verified.");
+      location.reload();
+    };
+
+    window.logout = () => {
+      signOut(auth).then(() => {
+        window.location.href = "/login.html";
+      });
+    };
+  </script>
+</body>
+</html>
