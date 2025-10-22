@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mukhosto | Login / Signup</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+  <div class="bg-white shadow-md p-6 rounded-xl max-w-sm w-full">
+    <!-- Tabs -->
+    <div class="flex mb-6 border-b">
+      <button id="login-tab" class="w-1/2 py-2 font-semibold text-blue-600 border-b-2 border-blue-600">Login</button>
+      <button id="signup-tab" class="w-1/2 py-2 font-semibold text-gray-600">Signup</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <input id="login-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-2 border rounded" />
+      <input id="login-password" type="password" placeholder="Password" class="w-full mb-4 px-4 py-2 border rounded" />
+
+      <button id="login-btn" onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded mb-3 flex items-center justify-center">
+        <svg id="login-spinner" class="w-5 h-5 mr-2 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span id="login-text">Login</span>
+      </button>
+
+      <button onclick="continueWithGoogle()" class="w-full py-2 rounded border flex items-center justify-center hover:bg-gray-100">
+        <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5 mr-2" alt="Google logo" />
+        <span>Continue with Google</span>
+      </button>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="signup-form" class="hidden">
+      <input id="signup-name" type="text" placeholder="Full Name" class="w-full mb-3 px-4 py-2 border rounded" />
+      <input id="signup-email" type="email" placeholder="Email" class="w-full mb-3 px-4 py-2 border rounded" />
+      <input id="signup-password" type="password" placeholder="Password" class="w-full mb-4 px-4 py-2 border rounded" />
+
+      <button id="signup-btn" onclick="signup()" class="w-full bg-blue-600 text-white py-2 rounded mb-3 flex items-center justify-center">
+        <svg id="signup-spinner" class="w-5 h-5 mr-2 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span id="signup-text">Sign Up</span>
+      </button>
+
+      <button onclick="continueWithGoogle()" class="w-full py-2 rounded border flex items-center justify-center hover:bg-gray-100">
+        <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5 mr-2" alt="Google logo" />
+        <span>Continue with Google</span>
+      </button>
+    </div>
+
+    <!-- Error Display -->
+    <p id="error" class="text-red-500 text-sm mt-3 text-center"></p>
+  </div>
+
+  <script type="module">
+    // --- Firebase Config ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqzg9fA14lD_ygNx8CSRiRsnrz1bBNfUw",
+      authDomain: "memory-auth-9515c.firebaseapp.com",
+      projectId: "memory-auth-9515c",
+      storageBucket: "memory-auth-9515c.appspot.com",
+      messagingSenderId: "862743577103",
+      appId: "1:862743577103:web:11fe02f4c24ef2c9c8197a",
+      measurementId: "G-XNT36FMPK6"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      signInWithPopup,
+      GoogleAuthProvider
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    const errorDisplay = document.getElementById("error");
+
+    // ---- Tabs Switch ----
+    const loginTab = document.getElementById("login-tab");
+    const signupTab = document.getElementById("signup-tab");
+    const loginForm = document.getElementById("login-form");
+    const signupForm = document.getElementById("signup-form");
+
+    loginTab.onclick = () => {
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+      loginTab.classList.add("text-blue-600", "border-b-2", "border-blue-600");
+      signupTab.classList.remove("text-blue-600", "border-b-2", "border-blue-600");
+      signupTab.classList.add("text-gray-600");
+    };
+
+    signupTab.onclick = () => {
+      signupForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+      signupTab.classList.add("text-blue-600", "border-b-2", "border-blue-600");
+      loginTab.classList.remove("text-blue-600", "border-b-2", "border-blue-600");
+      loginTab.classList.add("text-gray-600");
+    };
+
+    // ---- Signup (Email/Password) ----
+    window.signup = () => {
+      const name = document.getElementById("signup-name").value.trim();
+      const email = document.getElementById("signup-email").value.trim();
+      const password = document.getElementById("signup-password").value.trim();
+      const signupSpinner = document.getElementById("signup-spinner");
+      const signupBtn = document.getElementById("signup-btn");
+      const signupText = document.getElementById("signup-text");
+
+      errorDisplay.textContent = "";
+      if (!name || !email || !password) {
+        errorDisplay.textContent = "Please fill all fields!";
+        return;
+      }
+
+      signupSpinner.classList.remove("hidden");
+      signupBtn.disabled = true;
+      signupText.textContent = "Signing up…";
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(async (cred) => {
+          const userRef = doc(db, "users", cred.user.uid);
+          await setDoc(userRef, {
+            paid: false,
+            email: email,
+            name: name
+          });
+          window.location.href = "/";
+        })
+        .catch(err => errorDisplay.textContent = err.message)
+        .finally(() => {
+          signupSpinner.classList.add("hidden");
+          signupBtn.disabled = false;
+          signupText.textContent = "Sign Up";
+        });
+    };
+
+    // ---- Login (Email/Password) ----
+    window.login = () => {
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value.trim();
+      const loginSpinner = document.getElementById("login-spinner");
+      const loginBtn = document.getElementById("login-btn");
+      const loginText = document.getElementById("login-text");
+
+      errorDisplay.textContent = "";
+      loginSpinner.classList.remove("hidden");
+      loginBtn.disabled = true;
+      loginText.textContent = "Logging in…";
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => window.location.href = "/")
+        .catch(err => errorDisplay.textContent = err.message)
+        .finally(() => {
+          loginSpinner.classList.add("hidden");
+          loginBtn.disabled = false;
+          loginText.textContent = "Login";
+        });
+    };
+
+    // ---- Google Login/Signup (Create Once) ----
+    window.continueWithGoogle = () => {
+      errorDisplay.textContent = "";
+      signInWithPopup(auth, provider)
+        .then(async (result) => {
+          const user = result.user;
+          const userRef = doc(db, "users", user.uid);
+          const snap = await getDoc(userRef);
+          if (!snap.exists()) {
+            await setDoc(userRef, {
+              paid: false,
+              email: user.email,
+              name: user.displayName || "Anonymous"
+            });
+          }
+          window.location.href = "/";
+        })
+        .catch(err => errorDisplay.textContent = err.message);
+    };
+  </script>
+</body>
+</html>
