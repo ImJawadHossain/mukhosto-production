@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vocabulary Sets</title>
+
+  <!-- Styles -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase (already used elsewhere) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+</head>
+
+<body class="bg-gradient-to-b from-blue-50 to-white min-h-screen py-10 px-4">
+  <!-- Toast (hidden by default) -->
+  <div id="session-toast"
+       class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 hidden">
+    <div class="bg-green-600 text-white px-4 py-2 rounded-xl shadow">
+      <span id="toast-msg">Session complete!</span>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto text-center">
+    <h1 class="text-4xl font-bold text-blue-800 mb-4">Vocabulary Sets</h1>
+    <p class="text-gray-600 mb-6 text-lg">
+      Practice vocabulary in small, manageable sets for better retention.
+    </p>
+
+    <!-- Controls row -->
+    <div class="flex flex-wrap justify-center items-center gap-4 mb-8">
+      <!-- Known words -->
+      <a href="known-words.html"
+         class="bg-indigo-600 text-white px-4 py-2 rounded-xl shadow hover:bg-indigo-700 transition">
+        📚 Review Known Words
+      </a>
+
+      <!-- SRS Review button (shows count due) -->
+      <a id="review-link"
+         href="review.html"
+         class="bg-yellow-500 text-gray-900 px-4 py-2 rounded-xl shadow hover:bg-yellow-600 transition flex items-center gap-2">
+        🔔 Review due
+        <span id="review-count"
+              class="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 text-sm font-semibold rounded-full bg-white">
+          0
+        </span>
+      </a>
+
+      <!-- Settings -->
+      <a href="settings.html"
+         class="bg-gray-800 text-white px-4 py-2 rounded-xl shadow hover:bg-black transition">
+        ⚙️ Settings
+      </a>
+    </div>
+
+    <!-- Sets grid -->
+    <div id="sets-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <!-- Sets injected here -->
+    </div>
+  </div>
+
+  <!-- Libs & app scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- SRS helpers must load before index.js -->
+  <script src="srs.js"></script>
+
+  <!-- existing page logic -->
+  <script src="index.js"></script>
+
+  <footer class="text-center text-sm text-gray-500 mt-12 mb-6">
+    <a href="/" class="text-blue-600 hover:underline">← Back to Home</a>
+    <p class="mt-1">&copy; 2025 Jawad. All rights reserved.</p>
+  </footer>
+
+  <script type="module" src="/verifyAccess.js"></script>
+
+  <!-- Wire up the due counter + session toast -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      try {
+        // Update due count
+        const dueNow = (window.SRS && SRS.countDue) ? SRS.countDue() : 0;
+        const countEl = document.getElementById('review-count');
+        const linkEl  = document.getElementById('review-link');
+        countEl.textContent = dueNow;
+        if (!dueNow || dueNow <= 0) linkEl.classList.add('opacity-60');
+
+        // Show toast if a review session just finished
+        const raw = localStorage.getItem('srs_session_complete');
+        if (raw) {
+          localStorage.removeItem('srs_session_complete');
+          try {
+            const info = JSON.parse(raw) || {};
+            const reviewed = info.reviewed || 0;
+            const toast = document.getElementById('session-toast');
+            const msg = document.getElementById('toast-msg');
+            msg.textContent = reviewed > 0
+              ? `Great job! You reviewed ${reviewed} card${reviewed === 1 ? '' : 's'}.`
+              : 'Session complete!';
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2200);
+          } catch {}
+        }
+      } catch (e) {
+        console.error('Homepage init failed:', e);
+      }
+    });
+  </script>
+</body>
+</html>

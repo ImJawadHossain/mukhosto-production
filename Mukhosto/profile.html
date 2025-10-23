@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Profile</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white shadow-xl p-8 rounded-2xl max-w-md w-full space-y-6">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">👤 Your Profile</h1>
+      <p class="text-sm text-gray-500">Welcome back!</p>
+    </div>
+
+    <div class="space-y-4 text-gray-700">
+      <div>
+        <p class="text-xs font-medium text-gray-500 uppercase">Name</p>
+        <p id="user-name" class="text-lg font-semibold text-gray-800">Loading...</p>
+      </div>
+
+      <div>
+        <p class="text-xs font-medium text-gray-500 uppercase">Email</p>
+        <p id="user-email" class="text-base text-blue-600 break-words">Loading...</p>
+      </div>
+
+      <div>
+        <p class="text-xs font-medium text-gray-500 uppercase">Account Status</p>
+        <p id="user-status" class="inline-block px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700 font-medium">Checking...</p>
+      </div>
+
+      <div>
+        <p class="text-xs font-medium text-gray-500 uppercase">Signed in with</p>
+        <p id="provider" class="text-green-600 font-medium">Loading...</p>
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-wrap gap-2 justify-between items-center">
+      <a href="/" class="text-sm text-blue-600 hover:underline">← Back to Home</a>
+      <div class="flex gap-2">
+        <button onclick="resetPassword()" class="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">Reset Password</button>
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqzg9fA14lD_ygNx8CSRiRsnrz1bBNfUw",
+      authDomain: "memory-auth-9515c.firebaseapp.com",
+      projectId: "memory-auth-9515c",
+      storageBucket: "memory-auth-9515c.appspot.com",
+      messagingSenderId: "862743577103",
+      appId: "1:862743577103:web:11fe02f4c24ef2c9c8197a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      document.getElementById("user-email").textContent = user.email;
+
+      const provider = user.providerData[0]?.providerId || "unknown";
+      document.getElementById("provider").textContent =
+        provider === "password" ? "Email & Password" :
+        provider === "google.com" ? "Google" : provider;
+
+      try {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          document.getElementById("user-name").textContent = userData.name || "N/A";
+
+          const statusEl = document.getElementById("user-status");
+          if (userData.paid === true && userData.paymentStatus === "verified") {
+            statusEl.textContent = "Verified";
+            statusEl.className = "inline-block px-3 py-1 text-sm rounded-full bg-green-100 text-green-700 font-medium";
+          } else if (userData.paymentStatus === "pending") {
+            statusEl.textContent = "Pending";
+            statusEl.className = "inline-block px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700 font-medium";
+          } else {
+            statusEl.textContent = "Not Verified";
+            statusEl.className = "inline-block px-3 py-1 text-sm rounded-full bg-red-100 text-red-700 font-medium";
+          }
+        } else {
+          document.getElementById("user-name").textContent = "Unknown User";
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    });
+
+    window.logout = () => {
+      signOut(auth).then(() => {
+        window.location.href = "login.html";
+      });
+    };
+
+    window.resetPassword = () => {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        sendPasswordResetEmail(auth, user.email)
+          .then(() => {
+            alert('Password reset email sent! Please check your inbox.');
+          })
+          .catch((error) => {
+            console.error('Error sending password reset email:', error);
+            alert('Error sending reset email. Try again later.');
+          });
+      } else {
+        alert('No user is signed in.');
+      }
+    };
+  </script>
+</body>
+</html>

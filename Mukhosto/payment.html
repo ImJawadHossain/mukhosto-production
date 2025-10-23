@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Limited Time Offer | Jawad Hossain</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center px-4">
+  <div class="bg-white shadow-xl rounded-2xl max-w-2xl w-full p-8">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-gray-800 mb-4">🚀 Special Limited-Time Offer!</h1>
+      <p class="text-lg text-gray-600 mb-2">Get access to our premium content and tools at a massive discount.</p>
+      <p class="text-gray-700 text-md mb-4">Previously <span class="line-through text-red-500">৳1000</span>, now only <span class="text-green-600 font-semibold text-xl">৳499</span>!</p>
+    </div>
+
+    <div class="bg-gray-50 border border-dashed border-gray-300 p-4 rounded-lg mb-6 text-center">
+      <p class="text-sm text-gray-700 mb-2">Send ৳499 to the following bKash (personal) number:</p>
+      <p class="text-pink-600 font-bold text-2xl tracking-wide">01402633318</p>
+      <p class="text-xs mt-2 text-gray-500">After payment, enter your transaction details below to confirm.</p>
+    </div>
+
+    <div class="mb-4">
+      <input id="trxid" type="text" placeholder="bKash Transaction ID" class="w-full px-4 py-3 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <input id="mobile" type="text" placeholder="Your Mobile Number" class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    </div>
+
+    <button id="submit-btn" onclick="submitTrx()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition duration-200 flex items-center justify-center">
+      <svg id="submit-spinner" class="w-5 h-5 mr-2 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+      </svg>
+      <span id="submit-text">Confirm Payment</span>
+    </button>
+
+    <p id="message" class="text-green-600 text-center mt-4 hidden">🎉 Payment submitted! We’ll verify and activate your access soon.</p>
+    <p id="error" class="text-red-500 text-sm mt-2 text-center"></p>
+
+    <div class="mt-6 text-center text-sm text-gray-500">
+      1000+ satisfied users have already joined. Don’t miss out on this offer!
+    </div>
+  </div>
+
+  <script type="module">
+    const submitBtn = document.getElementById("submit-btn");
+    const submitSpinner = document.getElementById("submit-spinner");
+    const submitText = document.getElementById("submit-text");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqzg9fA14lD_ygNx8CSRiRsnrz1bBNfUw",
+      authDomain: "memory-auth-9515c.firebaseapp.com",
+      projectId: "memory-auth-9515c",
+      storageBucket: "memory-auth-9515c.appspot.com",
+      messagingSenderId: "862743577103",
+      appId: "1:862743577103:web:11fe02f4c24ef2c9c8197a",
+      measurementId: "G-XNT36FMPK6"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const trxInput = document.getElementById("trxid");
+    const mobileInput = document.getElementById("mobile");
+    const msg = document.getElementById("message");
+    const error = document.getElementById("error");
+
+    let currentUID = null;
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      currentUID = user.uid;
+    });
+
+    window.submitTrx = async () => {
+      error.textContent = "";
+      const trx = trxInput.value.trim();
+      const mobile = mobileInput.value.trim();
+
+      if (!trx || !mobile) {
+        error.textContent = "Please fill in both the Transaction ID and Mobile Number.";
+        return;
+      }
+
+      // Show loading
+      submitSpinner.classList.remove("hidden");
+      submitText.textContent = "Submitting...";
+      submitBtn.disabled = true;
+
+      try {
+        const ref = doc(db, "users", currentUID);
+        await updateDoc(ref, {
+          trxid: trx,
+          mobile: mobile,
+          paymentStatus: "pending",
+          paid: true
+        });
+
+        msg.classList.remove("hidden");
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 2000);
+      } catch (err) {
+        error.textContent = "Failed to save. Try again.";
+        submitSpinner.classList.add("hidden");
+        submitText.textContent = "Confirm Payment";
+        submitBtn.disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>

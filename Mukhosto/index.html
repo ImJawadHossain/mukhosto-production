@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>English Practice Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1e40af">
+
+</head>
+<body class="bg-gray-50 min-h-screen py-10 px-4">
+
+  <!-- 🔝 Profile Dropdown -->
+  <div class="absolute top-4 right-6">
+    <div class="relative inline-block text-left">
+      <button id="profile-button" class="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 rounded-full shadow-sm hover:bg-gray-100 transition">
+        <img id="profile-avatar" src="" alt="Avatar" class="w-8 h-8 rounded-full" />
+        <span id="user-name" class="text-sm font-medium text-gray-700">Loading...</span>
+        <span id="access-badge" class="ml-2 text-xs font-semibold px-2 py-0.5 rounded hidden"></span>
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+        <a href="/profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Profile</a>
+        <a id="access-status-link" href="#" class="block px-4 py-2 text-sm font-medium rounded"></a>
+        <a href="/payment.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Buy Now</a>
+        <button id="logout-btn" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 💡 Main Content -->
+  <div class="max-w-5xl mx-auto text-center">
+    <h1 class="text-4xl font-bold mb-4"><br>Mukhosto.com | Memorization Tools</h1>
+    <p class="text-lg text-gray-600 mb-10">Sharpen your English skills — one click at a time!</p>
+
+  <div id="install-container" class="fixed bottom-6 right-6 hidden">
+  <button id="install-button" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition">
+    📲 Install App
+  </button>
+</div>
+
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="rounded-2xl shadow-md hover:shadow-lg transition bg-white p-6 flex flex-col items-center text-center">
+        <i data-lucide="book-open" class="w-8 h-8 text-blue-600"></i>
+        <h2 class="text-xl font-semibold mt-4 mb-2">Student Vocabulary</h2>
+        <p class="text-sm text-gray-500 mb-4">500 very important vocabulary for Admission, Job Exam</p>
+        <a href="/vocabulary" class="bg-blue-600 text-white px-4 py-2 rounded-xl">Start Practicing</a>
+      </div>
+
+      <div class="rounded-2xl shadow-md hover:shadow-lg transition bg-white p-6 flex flex-col items-center text-center">
+        <i data-lucide="repeat" class="w-8 h-8 text-green-600"></i>
+        <h2 class="text-xl font-semibold mt-4 mb-2">IELTS Vocabulary</h2>
+        <p class="text-sm text-gray-500 mb-4">These 800 Vocabulary is enough for getting IELST band: 8 or higher</p>
+        <a href="/IELTS" class="bg-green-600 text-white px-4 py-2 rounded-xl">Start Practicing</a>
+      </div>
+
+      <div class="rounded-2xl shadow-md hover:shadow-lg transition bg-white p-6 flex flex-col items-center text-center">
+        <i data-lucide="message-circle" class="w-8 h-8 text-purple-600"></i>
+        <h2 class="text-xl font-semibold mt-4 mb-2">Vocabulary for Speaking</h2>
+        <p class="text-sm text-gray-500 mb-4">Learn these 600 vocabulary for everyday speaking</p>
+        <a href="/Speaking" class="bg-purple-600 text-white px-4 py-2 rounded-xl">Start Practicing</a>
+      </div>
+
+      <div class="rounded-2xl shadow-md hover:shadow-lg transition bg-white p-6 flex flex-col items-center text-center">
+        <i data-lucide="scroll-text" class="w-8 h-8 text-yellow-600"></i>
+        <h2 class="text-xl font-semibold mt-4 mb-2">Basic Vocabulary</h2>
+        <p class="text-sm text-gray-500 mb-4">Basic 600 vocabulary like "Eat: খাওয়া”</p>
+        <a href="/basic" class="bg-yellow-600 text-white px-4 py-2 rounded-xl">Start Practicing</a>
+      </div>
+      
+      
+      
+
+
+  <!-- 📎 Footer -->
+  <footer class="text-center text-sm text-gray-500 mt-12 mb-6">
+    <p class="mt-1">&copy; 2025 Jawad. All rights reserved.</p>
+  </footer>
+
+  <!-- 📜 Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqzg9fA14lD_ygNx8CSRiRsnrz1bBNfUw",
+      authDomain: "memory-auth-9515c.firebaseapp.com",
+      projectId: "memory-auth-9515c",
+      storageBucket: "memory-auth-9515c.appspot.com",
+      messagingSenderId: "862743577103",
+      appId: "1:862743577103:web:11fe02f4c24ef2c9c8197a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const profileButton = document.getElementById('profile-button');
+    const dropdown = document.getElementById('dropdown-menu');
+    const userNameSpan = document.getElementById('user-name');
+    const logoutBtn = document.getElementById('logout-btn');
+    const avatarImg = document.getElementById('profile-avatar');
+    const badge = document.getElementById('access-badge');
+    const accessLink = document.getElementById('access-status-link');
+
+    profileButton.addEventListener('click', () => dropdown.classList.toggle('hidden'));
+    logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.href = '/login.html'));
+onAuthStateChanged(auth, async (user) => {
+  const dropdownMenu = document.getElementById("dropdown-menu");
+
+  // Clean up extra links if previously rendered
+  ['signup-link', 'admin-dashboard-link'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+
+  // Guest
+  if (!user) {
+    userNameSpan.textContent = "Guest";
+    avatarImg.src = `https://ui-avatars.com/api/?name=Guest&background=ccc&size=32`;
+
+    badge.textContent = "Login/Signup";
+    badge.className = "ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-600";
+    badge.classList.remove("hidden");
+
+    accessLink.textContent = "🔐 Login";
+    accessLink.href = "/login.html";
+    accessLink.className = "block px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200";
+    logoutBtn.classList.add("hidden");
+
+    // Add Signup
+    const signupLink = document.createElement("a");
+    signupLink.id = "signup-link";
+    signupLink.href = "/signup.html";
+    signupLink.textContent = "📝 Signup";
+    signupLink.className = "block px-4 py-2 text-sm font-medium bg-blue-100 text-green-700 hover:bg-green-200";
+    dropdownMenu.appendChild(signupLink);
+
+
+
+
+    return;
+  }
+
+  // Logged-in user
+  logoutBtn.classList.remove("hidden");
+
+  const snap = await getDoc(doc(db, 'users', user.uid));
+  const name = snap.exists() ? snap.data().name : user.email;
+  const isAdmin = snap.exists() && snap.data().admin === true;
+  const paymentStatus = snap.exists() ? snap.data().paymentStatus : "not paid";
+
+  userNameSpan.textContent = name;
+  const initials = name.split(" ").map(n => n[0]).join("").toUpperCase();
+  avatarImg.src = `https://ui-avatars.com/api/?name=${initials}&background=random&size=32`;
+
+  if (isAdmin) {
+    // Admin UI
+    badge.textContent = "Admin";
+    badge.className = "ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-black text-white";
+    badge.classList.remove("hidden");
+
+    accessLink.textContent = "🛠 Admin Dashboard";
+    accessLink.href = "/admin";
+    accessLink.className = "block px-4 py-2 text-sm font-medium bg-black text-white hover:bg-gray-800";
+
+    return;
+  }
+
+  // General User Access Logic
+  badge.classList.remove("hidden");
+
+  if (paymentStatus === "verified") {
+    badge.textContent = "Full Access";
+    badge.className = "ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-green-100 text-green-700";
+
+    accessLink.textContent = "✅ Full Access";
+    accessLink.href = "/dashboard.html";
+    accessLink.className = "block px-4 py-2 text-sm font-medium bg-green-100 text-green-700";
+    accessLink.style.cursor = "default";
+
+  } else if (paymentStatus === "pending") {
+    badge.textContent = "Reviewing";
+    badge.className = "ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-yellow-100 text-yellow-700";
+
+    accessLink.textContent = "⏳ Reviewing...";
+    accessLink.href = "/dashboard.html";
+    accessLink.className = "block px-4 py-2 text-sm font-medium bg-yellow-100 text-yellow-700";
+    accessLink.style.cursor = "default";
+
+  } else {
+    badge.textContent = "No Access";
+    badge.className = "ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-red-700";
+
+    accessLink.textContent = "🔓 Get Full Access";
+    accessLink.href = "/payment.html";
+    accessLink.className = "block px-4 py-2 text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200";
+  }
+});
+
+
+
+
+  </script>
+
+  <script>
+    lucide.createIcons();
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service worker registered:', reg))
+        .catch(err => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+
+<script>
+  let deferredPrompt;
+  const installContainer = document.getElementById("install-container");
+  const installButton = document.getElementById("install-button");
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    // Stop the mini-infobar from appearing
+    e.preventDefault();
+    deferredPrompt = e;
+    installContainer.classList.remove("hidden"); // Show the custom install button
+  });
+
+  installButton.addEventListener("click", async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      if (outcome === 'accepted') {
+        installContainer.classList.add("hidden");
+      }
+      deferredPrompt = null;
+    }
+  });
+</script>
+
+
+
+
+</body>
+</html>
